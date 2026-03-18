@@ -1,52 +1,75 @@
-import streamlit as st  # Import Streamlit for the web interface
-import joblib           # Import Joblib to load your saved ML model
-import pandas as pd     # Import Pandas to handle the data in a table format
+import streamlit as st
+import joblib
+import pandas as pd
 
-# 1. Load the trained model file
-model = joblib.load("best_model.pkl") # Loads the .pkl file you created
+# 1. Load the model
+# Ensure 'best_model.pkl' is in the same folder as this script
+model = joblib.load("best_model.pkl")
 
-# 2. Set the Title of your Web App
-st.title("Student Performance Checker") # Displays a big heading on the page
+# --- UI Setup ---
+st.set_page_config(page_title="Student Performance Pro", layout="centered")
 
-# 3. Create Input Boxes for the 8 features the model needs
-val = st.number_input("Record ID", value=100) # Input for 'value' column
-hrs = st.number_input("Hours Studied", 0, 24, 15) # Input for 'Hours Studied'
-prev = st.number_input("Previous Score", 0, 100, 90) # Input for 'Previous Scores'
-sleep = st.number_input("Sleep Hours", 0, 24, 8) # Input for 'Sleep Hours'
-paper = st.number_input("Papers Practiced", 0, 50, 10) # Input for 'Sample Papers'
-p_idx = st.number_input("Performance Index", 0, 100, 85) # Input for 'Performance Index'
-gen = st.selectbox("Gender (1=Male, 0=Female)", [1, 0]) # Input for 'Gender_Male'
-ext = st.selectbox("Extracurricular (1=Yes, 0=No)", [1, 0]) # Input for 'Extracurricular_Yes'
+st.title("🎓 Student Performance Prediction")
+st.markdown("### Computer Science Project - Student Outcome Analysis")
+st.write("Fill in the student's details below to predict their performance category.")
 
-# 4. Create the 'Predict' Button
-if st.button("Predict"): # When the button is clicked, do the following:
+st.divider()
 
-    # Put all inputs into a dictionary (Label : Value)
-    # The labels MUST match the names your model was trained on
-    data = {
-        "value": [val],
-        "Hours Studied": [hrs],
-        "Previous Scores": [prev],
-        "Sleep Hours": [sleep],
-        "Sample Question Papers Practiced": [paper],
-        "Performance Index": [p_idx],
-        "Gender_Male": [gen],
-        "Extracurricular Activities_Yes": [ext]
+# 2. Input Fields (Matched to your model's 8 specific features)
+col1, col2 = st.columns(2)
+
+with col1:
+    value_idx = st.number_input("Value (Record ID)", value=100)
+    hours_studied = st.number_input("Hours Studied", 0, 24, 15)
+    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 90)
+    sleep_hours = st.number_input("Sleep Hours", 0, 24, 8)
+
+with col2:
+    sample_papers = st.number_input("Sample Papers Practiced", 0, 50, 10)
+    performance_idx = st.number_input("Performance Index (0-100)", 0, 100, 85)
+    gender = st.selectbox("Gender", options=[1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
+    extra_act = st.selectbox("Extracurricular Activities", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+
+st.divider()
+
+# 3. Prediction Logic
+if st.button("Predict Student Outcome", use_container_width=True):
+    # Create the dictionary with the EXACT names your model requires
+    data_dict = {
+        "value": [value_idx],
+        "Hours Studied": [hours_studied],
+        "Previous Scores": [prev_scores],
+        "Sleep Hours": [sleep_hours],
+        "Sample Question Papers Practiced": [sample_papers],
+        "Performance Index": [performance_idx],
+        "Gender_Male": [gender],
+        "Extracurricular Activities_Yes": [extra_act]
     }
 
-    # Convert the dictionary into a Pandas DataFrame
-    df = pd.DataFrame(data)
+    input_df = pd.DataFrame(data_dict)
 
-    # Reorder the columns to match the model's training order exactly
-    df = df[model.feature_names_in_]
+    try:
+        # Reorder columns to match the model's training order automatically
+        input_data_ready = input_df[model.feature_names_in_]
+        
+        # Get the prediction (0 or 1)
+        prediction = model.predict(input_data_ready)
+        result = int(prediction[0])
 
-    # Use the model to make a prediction (returns 0 or 1)
-    prediction = model.predict(df)
-    result = prediction[0] # Get the first (and only) result from the list
+        st.subheader("Final Verdict:")
+        
+        # --- CORRECTED LOGIC ---
+        # Based on your high-performing test case (15 hrs, 90% score), 
+        # your model outputs '0' for GOOD students.
+        if result == 0:
+            st.success(f"✅ Prediction: **GOOD PERFORMANCE** (Model Output: {result})")
+            st.balloons()
+        else:
+            st.error(f"❌ Prediction: **BAD PERFORMANCE** (Model Output: {result})")
+            
+    except Exception as e:
+        st.error(f"Error during prediction: {e}")
 
-    # 5. Display the result to the user
-    # Based on your model output, 0 means 'Good'
-    if result == 0:
-        st.success("Result: GOOD PERFORMANCE") # Show a green box for Good
-    else:
-        st.error("Result: BAD PERFORMANCE") # Show a red box for Bad
+# Footer
+st.divider()
+st.caption("Developed by Shivam Umesh Jaiswal | B.Sc. Computer Science")
