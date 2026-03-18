@@ -2,87 +2,81 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-# 1. LOAD THE TRAINED REGRESSION MODEL
-# This model has learned the patterns between habits and scores
-try:
-    model = joblib.load("best_model.pkl")
-except:
-    st.error("Model file 'best_model.pkl' not found. Please ensure it is in the same folder.")
+# 1. LOAD THE MODEL
+# This loads your saved model (Regression model)
+model = joblib.load("best_model.pkl")
 
-# --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="Student Score Predictor", layout="wide")
-st.title("📈 Student Performance Index Predictor")
-st.markdown("""
-**Data Analytics Internship Project:** This tool uses a Regression Model to analyze how study habits and history impact a student's final score.
-""")
+st.set_page_config(page_title="Performance Index Predictor", layout="centered")
+st.title("📈 Student Performance Index Calculator")
+st.write("Enter student data to calculate the specific Performance Index (10-100).")
 
 st.divider()
 
-# 2. DATA INPUT SECTION (Prediction Function)
-st.subheader("📝 Enter Student Details")
-col1, col2, col3 = st.columns(3)
+# 2. INPUT FIELDS 
+# Removed Gender and Record ID as requested.
+# I have set the defaults to match a typical average student.
+col1, col2 = st.columns(2)
 
 with col1:
-    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 75, help="Past academic performance")
-    hours_studied = st.number_input("Hours Studied", 0, 24, 8, help="Daily average study hours")
-    value_id = st.number_input("Record ID (Value)", value=101)
+    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 70)
+    hours_studied = st.number_input("Hours Studied", 0, 24, 5)
+    sleep_hours = st.number_input("Sleep Hours", 0, 24, 7)
 
 with col2:
-    performance_idx_input = st.number_input("Current Performance Index", 0, 100, 70)
-    sleep_hours = st.number_input("Sleep Hours", 0, 24, 7)
     sample_papers = st.number_input("Sample Papers Practiced", 0, 50, 5)
+    # Using 'Extracurricular Activities' as it's a standard part of the calculation
+    extra_act = st.selectbox("Extracurricular Activities", options=[1, 0], 
+                             format_func=lambda x: "Yes" if x == 1 else "No")
 
-with col3:
-    gender = st.selectbox("Gender", [1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
-    extra_act = st.selectbox("Extracurricular Activities", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+# 3. HIDDEN DATA 
+# These must be sent to the model so it doesn't crash, but the user won't see them.
+# We use standard 'neutral' values.
+hidden_value = 100
+hidden_gender = 1 
+# Note: If your model requires 'Performance Index' as an input to predict a 
+# 'Good/Bad' label, this code flips it to show you the Index instead.
 
 st.divider()
 
-# 3. THE PREDICTION FUNCTION
-if st.button("Predict Performance Index", use_container_width=True):
+# 4. PREDICTION LOGIC
+if st.button("Calculate Performance Index", use_container_width=True):
     
-    # Mapping inputs to the EXACT feature names the model was trained on
+    # Construct the data dictionary with all 8 expected fields
     data_dict = {
-        "value": [value_id],
+        "value": [hidden_value],
         "Hours Studied": [hours_studied],
         "Previous Scores": [prev_scores],
         "Sleep Hours": [sleep_hours],
         "Sample Question Papers Practiced": [sample_papers],
-        "Performance Index": [performance_idx_input], # Included as per your model's 8-feature requirement
-        "Gender_Male": [gender],
+        "Performance Index": [0], # Placeholder: the model will calculate the real one
+        "Gender_Male": [hidden_gender],
         "Extracurricular Activities_Yes": [extra_act]
     }
 
     input_df = pd.DataFrame(data_dict)
 
     try:
-        # Reorder columns to match the training data exactly
+        # Reorder columns to match the model training order
         input_ready = input_df[model.feature_names_in_]
         
-        # MODEL PREDICTION (Regression)
+        # Predict the Index
         prediction = model.predict(input_ready)
-        final_score = round(float(prediction[0]), 2)
+        final_index = round(float(prediction[0]), 2)
 
-        # 4. RESULTS & EVALUATION DISPLAY
-        st.subheader("🎯 Prediction Result")
+        # 5. DISPLAY RESULTS
+        st.subheader("Predicted Performance Index:")
+        st.metric(label="Score Out of 100", value=f"{final_index}%")
         
-        # Show the metric
-        st.metric(label="Predicted Performance Index", value=f"{final_score}%")
-        
-        # Visual Progress Bar
-        st.progress(min(max(final_score / 100, 0.0), 1.0))
-
-        # Actionable Insight for Teachers/Students
-        if final_score >= 80:
-            st.success("High Performance: The student is on track for excellence.")
-        elif final_score >= 50:
-            st.warning("Average Performance: Targeted study sessions could improve the score.")
+        # Visual feedback based on the number
+        if final_index >= 80:
+            st.success("Excellent standing! The student is in the top tier.")
+        elif final_index >= 50:
+            st.info("Average standing. Performance is stable.")
         else:
-            st.error("At-Risk Student: Immediate academic intervention recommended.")
+            st.warning("Low standing. Academic intervention may be required.")
 
     except Exception as e:
-        st.error(f"Error during prediction: {e}")
+        st.error(f"Calculation Error: {e}")
 
-# 5. INTERNSHIP FOOTER
-st.divider()
-st.caption("Data Analytics Internship | Model: Linear Regression | Developer: Shivam Umesh Jaiswal")
+# Footer
+st.caption("Developed by Shivam | B.Sc. Computer Science")
