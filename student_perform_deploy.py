@@ -1,78 +1,56 @@
 import streamlit as st
-import joblib
 import pandas as pd
+import numpy as np
+import joblib
 
-# 1. LOAD THE MODEL
-# We assume this is a Regressor model (predicts a number, not just 0 or 1)
-model = joblib.load("best_model.pkl")
+# --- PAGE SETUP ---
+st.set_page_config(page_title="Performance Predictor", page_icon="🎓")
 
-st.set_page_config(page_title="Performance Predictor", layout="wide")
+# --- LOAD THE PRE-TRAINED MODEL ---
+@st.cache_resource
+def load_my_model():
+    # This loads the .pkl file shown in your screenshot
+    return joblib.load('best_model.pkl')
+
+model = load_my_model()
+
+# --- USER INTERFACE ---
 st.title("📈 Student Performance Index Predictor")
-st.write("Enter the metrics below to predict the estimated Performance Index.")
+st.write("Enter student data below to get an instant performance prediction.")
 
-st.divider()
-
-# 2. USER INPUTS
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 80)
-    hours_studied = st.number_input("Hours Studied", 0, 24, 8)
-
-with col2:
-    sleep_hours = st.number_input("Sleep Hours", 0, 24, 7)
-    sample_papers = st.number_input("Papers Practiced", 0, 50, 5)
-
-with col3:
-    extra_act = st.selectbox("Extracurriculars", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
-
-# 3. BACKGROUND DATA (Hidden from User)
-fixed_value = 100 
-fixed_gender = 1
-
-st.divider()
-
-# 4. PREDICTION LOGIC
-if st.button("Calculate Performance Index", use_container_width=True):
+# Form for user input
+with st.form("input_form"):
+    col1, col2 = st.columns(2)
     
-    # Organize data for the model
-    data_dict = {
-        "value": [fixed_value],
-        "Hours Studied": [hours_studied],
-        "Previous Scores": [prev_scores],
-        "Sleep Hours": [sleep_hours],
-        "Sample Question Papers Practiced": [sample_papers],
-        "Performance Index": [0], # Placeholder if the model requires it in the input array
-        "Gender_Male": [fixed_gender],
-        "Extracurricular Activities_Yes": [extra_act]
-    }
-
-    input_df = pd.DataFrame(data_dict)
-
-    try:
-        # Match the model's expected column order
-        input_ready = input_df[model.feature_names_in_]
+    with col1:
+        hours = st.number_input("Hours Studied", min_value=0, max_value=24, value=5)
+        prev_scores = st.number_input("Previous Scores", min_value=0, max_value=100, value=70)
+        sleep = st.number_input("Sleep Hours", min_value=0, max_value=24, value=7)
         
-        # Predict the numerical Index
-        prediction = model.predict(input_ready)
-        final_index = round(float(prediction[0]), 2)
+    with col2:
+        extra_classes = st.number_input("Extra Classes Attended", min_value=0, max_value=10, value=0)
+        # Note: If your model was trained with 'Yes/No' (0/1), 
+        # make sure these features match your training columns exactly!
 
-        # 5. DISPLAY RESULTS
-        st.subheader("Predicted Result:")
-        st.metric(label="Estimated Performance Index", value=f"{final_index}%")
-        
-        # Simple progress bar for visual impact
-        st.progress(min(final_index / 100, 1.0))
+    submit = st.form_submit_button("Predict Performance Index")
 
-        if final_index >= 75:
-            st.success("This indicates a strong academic standing!")
-        elif final_index >= 50:
-            st.warning("This indicates average performance. Consider increasing study hours.")
-        else:
-            st.error("This indicates a risk of poor performance.")
-
-    except Exception as e:
-        st.error(f"Prediction Error: {e}")
-
-# Footer
-st.caption("Developed by Shivam | B.Sc. Computer Science | Final Goal Version")
+# --- PREDICTION LOGIC ---
+if submit:
+    # 1. Arrange features in the exact order your model expects
+    # (Update this list if your model has more/different columns!)
+    feature_list = np.array([[hours, prev_scores, sleep, extra_classes]])
+    
+    # 2. Predict
+    prediction = model.predict(feature_list)
+    
+    # 3. Display result
+    st.divider()
+    st.subheader(f"Predicted Performance Index: {prediction[0]:.2f}")
+    
+    # Simple advice based on score
+    if prediction[0] > 75:
+        st.success("Keep it up! The student is on a great track.")
+    elif prediction[0] > 40:
+        st.info("Stable performance. Consistency is key.")
+    else:
+        st.warning("Low prediction. Suggesting additional support or revision.")
