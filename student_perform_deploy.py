@@ -1,40 +1,42 @@
-import streamlit as st
-import joblib
-import pandas as pd
+import streamlit as st  # For creating the website interface
+import joblib           # For loading your 'best_model.pkl' file
+import pandas as pd     # For organizing the data into a table (DataFrame)
 
-# 1. Load the model
-# Ensure 'best_model.pkl' is in the same folder as this script
+# 1. LOAD THE MODEL
+# This line finds your saved machine learning model and prepares it for use
 model = joblib.load("best_model.pkl")
 
-# --- UI Setup ---
-st.set_page_config(page_title="Student Performance Pro", layout="centered")
-
+# 2. APP UI SETUP
+# These lines create the title and the headings on your website
+st.set_page_config(page_title="Student Performance Pro")
 st.title("🎓 Student Performance Prediction")
-st.markdown("### Computer Science Project - Student Outcome Analysis")
-st.write("Fill in the student's details below to predict their performance category.")
+st.write("Enter the details below to predict if the student's performance is Good or Bad.")
 
-st.divider()
+st.divider() # Adds a horizontal line for better design
 
-# 2. Input Fields (Matched to your model's 8 specific features)
-col1, col2 = st.columns(2)
+# 3. USER INPUT FIELDS
+# We create 8 input boxes because your model expects exactly 8 pieces of data
+col1, col2 = st.columns(2) # Splits the screen into two columns for a cleaner look
 
 with col1:
-    value_idx = st.number_input("Value (Record ID)", value=100)
-    hours_studied = st.number_input("Hours Studied", 0, 24, 15)
-    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 90)
-    sleep_hours = st.number_input("Sleep Hours", 0, 24, 8)
+    value_idx = st.number_input("Record ID", value=100) # 'value' column
+    hours_studied = st.number_input("Hours Studied", 0, 24, 15) # 'Hours Studied'
+    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 90) # 'Previous Scores'
+    sleep_hours = st.number_input("Sleep Hours", 0, 24, 8) # 'Sleep Hours'
 
 with col2:
-    sample_papers = st.number_input("Sample Papers Practiced", 0, 50, 10)
-    performance_idx = st.number_input("Performance Index (0-100)", 0, 100, 85)
-    gender = st.selectbox("Gender", options=[1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
-    extra_act = st.selectbox("Extracurricular Activities", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+    sample_papers = st.number_input("Papers Practiced", 0, 50, 10) # 'Sample Question Papers'
+    performance_idx = st.number_input("Performance Index", 0, 100, 85) # 'Performance Index'
+    gender = st.selectbox("Gender", [1, 0]) # 1 for Male, 0 for Female
+    extra_act = st.selectbox("Extracurriculars", [1, 0]) # 1 for Yes, 0 for No
 
 st.divider()
 
-# 3. Prediction Logic
-if st.button("Predict Student Outcome", use_container_width=True):
-    # Create the dictionary with the EXACT names your model requires
+# 4. PREDICTION LOGIC
+# This code runs only when the 'Predict' button is clicked
+if st.button("Predict Result", use_container_width=True):
+    
+    # Store all user inputs in a dictionary with the exact names the model wants
     data_dict = {
         "value": [value_idx],
         "Hours Studied": [hours_studied],
@@ -46,30 +48,25 @@ if st.button("Predict Student Outcome", use_container_width=True):
         "Extracurricular Activities_Yes": [extra_act]
     }
 
+    # Convert the dictionary into a DataFrame (the format ML models prefer)
     input_df = pd.DataFrame(data_dict)
 
-    try:
-        # Reorder columns to match the model's training order automatically
-        input_data_ready = input_df[model.feature_names_in_]
-        
-        # Get the prediction (0 or 1)
-        prediction = model.predict(input_data_ready)
-        result = int(prediction[0])
+    # Use 'feature_names_in_' to automatically reorder columns to match the model
+    input_ready = input_df[model.feature_names_in_]
+    
+    # Send the data to the model to get a result (0 or 1)
+    prediction = model.predict(input_ready)
+    result = prediction[0]
 
-        st.subheader("Final Verdict:")
-        
-        # --- CORRECTED LOGIC ---
-        # Based on your high-performing test case (15 hrs, 90% score), 
-        # your model outputs '0' for GOOD students.
-        if result == 0:
-            st.success(f"✅ Prediction: **GOOD PERFORMANCE** (Model Output: {result})")
-            st.balloons()
-        else:
-            st.error(f"❌ Prediction: **BAD PERFORMANCE** (Model Output: {result})")
-            
-    except Exception as e:
-        st.error(f"Error during prediction: {e}")
+    st.subheader("Final Verdict:")
+    
+    # --- LOGIC CORRECTION ---
+    # In your model, 0 = GOOD and 1 = BAD. 
+    # We use st.success for Good and st.error for Bad to color the results.
+    if result == 0:
+        st.success(f"✅ Outcome: **GOOD PERFORMANCE** (Model Output: {result})")
+    else:
+        st.error(f"❌ Outcome: **BAD PERFORMANCE** (Model Output: {result})")
 
-# Footer
-st.divider()
-st.caption("Developed by Shivam Umesh Jaiswal | B.Sc. Computer Science")
+# FOOTER
+st.caption("Developed by Shivam | B.Sc. Computer Science Project")
