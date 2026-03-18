@@ -28,7 +28,7 @@ input_data = pd.DataFrame([[
  Hours_Studied,
  Sleep_Hours,
  Tuition,
- Performance_Index
+ Performance_Index,
  Previous_Scores
 ]], columns=model.feature_names_in_)
 
