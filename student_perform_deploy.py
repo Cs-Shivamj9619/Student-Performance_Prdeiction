@@ -3,33 +3,38 @@ import joblib
 import pandas as pd
 
 # 1. Load the model
-# Make sure the file 'best_model.pkl' is in the same folder as this script
+# Ensure 'best_model.pkl' is in the same folder as this script
 model = joblib.load("best_model.pkl")
 
+# --- UI Setup ---
 st.set_page_config(page_title="Student Performance Pro", layout="centered")
-st.title("🎓 Student Performance Prediction")
-st.write("Enter the details below to see the predicted outcome.")
 
-# 2. Input Fields (Matched exactly to your model's 8 required features)
+st.title("🎓 Student Performance Prediction")
+st.markdown("### Computer Science Project - Student Outcome Analysis")
+st.write("Fill in the student's details below to predict their performance category.")
+
+st.divider()
+
+# 2. Input Fields (Matched to your model's 8 specific features)
 col1, col2 = st.columns(2)
 
 with col1:
-    value_idx = st.number_input("Value (ID/Index)", value=100)
+    value_idx = st.number_input("Value (Record ID)", value=100)
     hours_studied = st.number_input("Hours Studied", 0, 24, 15)
-    prev_scores = st.number_input("Previous Scores", 0, 100, 90)
+    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 90)
     sleep_hours = st.number_input("Sleep Hours", 0, 24, 8)
 
 with col2:
-    sample_papers = st.number_input("Papers Practiced", 0, 50, 10)
-    performance_idx = st.number_input("Performance Index", 0, 100, 85)
-    gender = st.selectbox("Gender (0=Female, 1=Male)", [1, 0])
-    extra_act = st.selectbox("Extracurricular (0=No, 1=Yes)", [1, 0])
+    sample_papers = st.number_input("Sample Papers Practiced", 0, 50, 10)
+    performance_idx = st.number_input("Performance Index (0-100)", 0, 100, 85)
+    gender = st.selectbox("Gender", options=[1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
+    extra_act = st.selectbox("Extracurricular Activities", options=[1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
 
 st.divider()
 
 # 3. Prediction Logic
-if st.button("Predict Result", use_container_width=True):
-    # Create the dictionary with the EXACT names from your error screen
+if st.button("Predict Student Outcome", use_container_width=True):
+    # Create the dictionary with the EXACT names your model requires
     data_dict = {
         "value": [value_idx],
         "Hours Studied": [hours_studied],
@@ -47,20 +52,24 @@ if st.button("Predict Result", use_container_width=True):
         # Reorder columns to match the model's training order automatically
         input_data_ready = input_df[model.feature_names_in_]
         
-        # Get the prediction
+        # Get the prediction (0 or 1)
         prediction = model.predict(input_data_ready)
-        result = prediction[0]
+        result = int(prediction[0])
 
-        st.subheader("Prediction Result:")
+        st.subheader("Final Verdict:")
         
-        # IMPORTANT: If '1' is Good, use this. If '0' is Good, swap the labels.
-        if result == 1:
-            st.success(f"✅ Outcome: GOOD (Model Output: {result})")
+        # --- CORRECTED LOGIC ---
+        # Based on your high-performing test case (15 hrs, 90% score), 
+        # your model outputs '0' for GOOD students.
+        if result == 0:
+            st.success(f"✅ Prediction: **GOOD PERFORMANCE** (Model Output: {result})")
+            st.balloons()
         else:
-            st.error(f"❌ Outcome: BAD (Model Output: {result})")
+            st.error(f"❌ Prediction: **BAD PERFORMANCE** (Model Output: {result})")
             
     except Exception as e:
         st.error(f"Error during prediction: {e}")
 
 # Footer
-st.caption("Developed by Shivam | Computer Science Project")
+st.divider()
+st.caption("Developed by Shivam Umesh Jaiswal | B.Sc. Computer Science")
