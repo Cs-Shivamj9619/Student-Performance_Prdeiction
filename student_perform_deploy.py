@@ -1,74 +1,71 @@
-import streamlit as st  # For the website interface
-import joblib           # To load the .pkl model file
-import pandas as pd     # To organize the data for the model
+import streamlit as st
+import joblib
+import pandas as pd
 
 # 1. LOAD THE MODEL
-# This loads your trained machine learning model
+# This loads your saved machine learning model
 model = joblib.load("best_model.pkl")
 
-# --- UI DESIGN ---
-st.set_page_config(page_title="Student Performance Pro")
-st.title("🎓 Student Performance Prediction")
-st.write("Enter student data to predict if their performance is Good or Bad.")
+# --- UI SETUP ---
+st.set_page_config(page_title="Performance Predictor", layout="centered")
+st.title("📊 Student Success Predictor")
+st.write("Predict student outcome based on academic history.")
 
 st.divider()
 
-# 2. INPUT FIELDS (Exactly 8 features)
-col1, col2 = st.columns(2)
+# 2. FOCUSED USER INPUTS
+# We only show the two features you want to focus on
+prev_scores = st.number_input("Overall Previous Scores (%)", 0, 100, 85)
+performance_idx = st.number_input("Current Performance Index", 0, 100, 80)
 
-with col1:
-    value_idx = st.number_input("Record ID (Value)", value=100)
-    hours_studied = st.number_input("Hours Studied", 0, 24, 15) # Default set to 15
-    prev_scores = st.number_input("Previous Scores (%)", 0, 100, 90) # Default set to 90
-    sleep_hours = st.number_input("Sleep Hours", 0, 24, 8)
-
-with col2:
-    sample_papers = st.number_input("Papers Practiced", 0, 50, 10)
-    performance_idx = st.number_input("Performance Index", 0, 100, 85) # Default set to 85
-    gender = st.selectbox("Gender", [1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
-    extra_act = st.selectbox("Extracurriculars", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+# 3. BACKGROUND DATA (Fixed Values)
+# These are required by the model, but we set them to "Good Student" defaults 
+# so they don't interfere with your main prediction.
+fixed_hours = 12          # Set to a high-average value
+fixed_sleep = 8           # Normal sleep
+fixed_papers = 5          # Average practice
+fixed_value = 100         # Default ID
+fixed_gender = 1          # Default Male
+fixed_extra = 1           # Default Yes
 
 st.divider()
 
-# 3. PREDICTION LOGIC
-if st.button("Predict Result", use_container_width=True):
+# 4. PREDICTION LOGIC
+if st.button("Analyze Performance", use_container_width=True):
     
-    # Store inputs in a dictionary using the exact names the model expects
+    # We combine your inputs with the hidden fixed values
     data_dict = {
-        "value": [value_idx],
-        "Hours Studied": [hours_studied],
+        "value": [fixed_value],
+        "Hours Studied": [fixed_hours],
         "Previous Scores": [prev_scores],
-        "Sleep Hours": [sleep_hours],
-        "Sample Question Papers Practiced": [sample_papers],
+        "Sleep Hours": [fixed_sleep],
+        "Sample Question Papers Practiced": [fixed_papers],
         "Performance Index": [performance_idx],
-        "Gender_Male": [gender],
-        "Extracurricular Activities_Yes": [extra_act]
+        "Gender_Male": [fixed_gender],
+        "Extracurricular Activities_Yes": [fixed_extra]
     }
 
-    # Convert to DataFrame
     input_df = pd.DataFrame(data_dict)
 
     try:
-        # Reorder columns to match the model's training order
+        # Reorder to match model's training order
         input_ready = input_df[model.feature_names_in_]
         
-        # Make the prediction
+        # Get result (0 or 1)
         prediction = model.predict(input_ready)
-        result = prediction[0]
+        result = int(prediction[0])
 
-        st.subheader("Final Verdict:")
+        st.subheader("Verdict:")
         
-        # LOGIC: If Output is 0, it means GOOD. If 1, it means BAD.
+        # 0 = GOOD, 1 = BAD (Based on your model's specific training)
         if result == 0:
-            st.success(f"✅ Outcome: **GOOD PERFORMANCE** (Model Output: {result})")
-            st.balloons() # Nice effect for a good result!
+            st.success(f"✅ Prediction: **GOOD PERFORMANCE**")
+            st.balloons()
         else:
-            st.error(f"❌ Outcome: **BAD PERFORMANCE** (Model Output: {result})")
-            st.info("Tip: Try increasing 'Hours Studied' or 'Performance Index' to see a GOOD result.")
-
+            st.error(f"❌ Prediction: **BAD PERFORMANCE**")
+            
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"Error: {e}")
 
-# FOOTER
-st.divider()
-st.caption("Developed by Shivam | B.Sc. Computer Science Project")
+# Footer
+st.caption("Simplified Predictor | Computer Science Project")
