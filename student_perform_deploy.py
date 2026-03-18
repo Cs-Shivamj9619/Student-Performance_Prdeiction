@@ -1,68 +1,48 @@
 import streamlit as st
 import joblib
 import numpy as np
-import pandas as pd
 
 # 1. Load the model
-try:
-    model = joblib.load("best_model.pkl")
-    # Identify how many features the model was trained with
-    if hasattr(model, 'n_features_in_'):
-        expected_features = model.n_features_in_
-    else:
-        # Default fallback for most student datasets
-        expected_features = 5 
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
+model = joblib.load("best_model.pkl")
 
 st.title("Student Performance Prediction")
-st.write(f"Note: This model is configured to use {expected_features} input features.")
 
-# 2. Define all possible inputs
-# We define 6 common ones, but we will only send what the model asks for.
-hours_studied = st.number_input("Hours Studied", min_value=0, max_value=24, value=5)
-previous_scores = st.number_input("Previous Scores", min_value=0, max_value=100, value=70)
-sleep_hours = st.number_input("Sleep Hours", min_value=0, max_value=24, value=7)
-sample_papers = st.number_input("Sample Question Papers Practiced", min_value=0, max_value=50, value=5)
+# 2. Input Fields (Providing 7 features)
+hours_studied = st.number_input("Hours Studied", 0, 24, 5)
+previous_scores = st.number_input("Previous Scores", 0, 100, 70)
+sleep_hours = st.number_input("Sleep Hours", 0, 24, 7)
+sample_papers = st.number_input("Sample Question Papers Practiced", 0, 50, 5)
 tuition = st.selectbox("Tuition (0=No, 1=Yes)", [0, 1])
 extracurricular = st.selectbox("Extracurricular Activities (0=No, 1=Yes)", [0, 1])
 
+# This is likely your 7th feature (Adjust label if your dataset used something else)
+parental_level = st.selectbox("Parental Education Level (0=Low, 1=High)", [0, 1])
+
 # 3. Predict Button
 if st.button("Predict Result"):
-    # Create a master list of all possible features
-    all_features = [
+    # This list MUST have exactly 7 items
+    features = [
         hours_studied,
         previous_scores,
         sleep_hours,
         sample_papers,
         tuition,
-        extracurricular
+        extracurricular,
+        parental_level  # The 7th feature
     ]
     
-    # SLICE the list to exactly the number the model wants
-    # If the model wants 5, it takes the first 5. If 6, it takes all 6.
-    final_features = all_features[:expected_features]
-    
     try:
-        # Perform prediction
-        prediction = model.predict([final_features])
+        prediction = model.predict([features])
         result = prediction[0]
 
         st.divider()
-        st.subheader("Result:")
+        st.subheader("Final Result:")
 
-        # Handle numeric (0/1) or string ("Positive"/"Negative") outputs
-        # This logic works for both Classifiers and Regressors
-        if str(result).lower() in ['1', 'positive', 'good', '1.0'] or (isinstance(result, (int, float)) and result > 0.5):
-            st.success(f"SUCCESS: The predicted performance is POSITIVE (Value: {result})")
+        # Using a simple check for common outputs
+        if str(result).lower() in ['1', 'positive', 'good', '1.0']:
+            st.success("Performance: GOOD")
         else:
-            st.error(f"NOTICE: The predicted performance is NEGATIVE (Value: {result})")
+            st.error("Performance: BAD")
             
-    except ValueError as e:
-        st.error("Feature Mismatch Error!")
-        st.info(f"The model expects {expected_features} features, but the input list logic failed.")
-        st.write(f"Technical details: {e}")
-
-# Footer for your college project
-st.sidebar.info("Developed by Shivam Jaiswal")
+    except Exception as e:
+        st.error(f"Error: {e}")
